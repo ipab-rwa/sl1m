@@ -29,6 +29,8 @@ class Planner:
         self.cost_dict = {"final_com": self.end_com_cost,
                           "end_effector_positions": self.end_effectors_position_cost,
                           "effector_positions_xy": self.effector_position_xy_cost,
+                          "effector_positions_3D": self.effector_position_3D_cost,
+                          "effector_positions_3D_select": self.effector_position_3D_select_cost,
                           "coms_xy": self.com_cost_xy,
                           "coms_z": self.com_cost_z,
                           "coms_3D": self.com_cost_3D,
@@ -600,10 +602,62 @@ class Planner:
             for foot in phase.moving:
                 A = np.zeros((2, n_variables))
                 A[:, j:j + self._default_n_variables(phase)] = self.foot_xy(phase, foot)
+                b = end_effector_positions[foot][phase.id][:2]
+
+                P += np.dot(A.T, A)
+                q -= np.dot(A.T, b).reshape(A.shape[1])
+
+            j += self._phase_n_variables(phase)
+
+        return P, q
+
+    def effector_position_3D_cost(self, end_effector_positions):
+        """
+        Compute a cost to keep the effectors with a specified distance to the shoulders
+        @param end_effector_positions desired effector positions
+        @return P matrix and q vector s.t. we minimize x' P x + q' x
+        """
+        n_variables = self._total_n_variables()
+        P = np.zeros((n_variables, n_variables))
+        q = np.zeros(n_variables)
+
+        j = 0
+        for phase in self.pb.phaseData:
+            # feet_phase = self._feet_last_moving_phase(phase.id)
+            for foot in phase.moving:
+                A = np.zeros((3, n_variables))
+                A[:, j:j + self._default_n_variables(phase)] = self.foot(phase, foot)
                 b = end_effector_positions[foot][phase.id]
 
                 P += np.dot(A.T, A)
                 q -= np.dot(A.T, b).reshape(A.shape[1])
+
+            j += self._phase_n_variables(phase)
+
+        return P, q
+
+    def effector_position_3D_select_cost(self, end_effector_positions_selected):
+        """
+        Compute a cost to keep the effectors with a specified distance to the shoulders
+        @param end_effector_positions desired effector positions
+        @return P matrix and q vector s.t. we minimize x' P x + q' x
+        """
+        feet_selected, end_effector_positions = end_effector_positions_selected
+        n_variables = self._total_n_variables()
+        P = np.zeros((n_variables, n_variables))
+        q = np.zeros(n_variables)
+
+        j = 0
+        for phase in self.pb.phaseData:
+            # feet_phase = self._feet_last_moving_phase(phase.id)
+            for foot in phase.moving:
+                if foot in feet_selected:
+                    A = np.zeros((3, n_variables))
+                    A[:, j:j + self._default_n_variables(phase)] = self.foot(phase, foot)
+                    b = end_effector_positions[foot][phase.id]
+
+                    P += np.dot(A.T, A)
+                    q -= np.dot(A.T, b).reshape(A.shape[1])
 
             j += self._phase_n_variables(phase)
 
