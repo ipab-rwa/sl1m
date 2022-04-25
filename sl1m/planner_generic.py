@@ -28,7 +28,7 @@ class Planner:
 
         self.cost_dict = {"final_com": self.end_com_cost,
                           "end_effector_positions": self.end_effectors_position_cost,
-                          "effector_positions": self.effector_position_cost,
+                          "effector_positions_xy": self.effector_position_xy_cost,
                           "coms_xy": self.com_cost_xy,
                           "coms_z": self.com_cost_z,
                           "coms_3D": self.com_cost_3D,
@@ -584,7 +584,7 @@ class Planner:
 
         return P, q
 
-    def effector_position_cost(self, end_effector_positions):
+    def effector_position_xy_cost(self, end_effector_positions):
         """
         Compute a cost to keep the effectors with a specified distance to the shoulders
         @param end_effector_positions desired effector positions
