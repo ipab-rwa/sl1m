@@ -31,6 +31,7 @@ class Planner:
                           "effector_positions_xy": self.effector_position_xy_cost,
                           "effector_positions_3D": self.effector_position_3D_cost,
                           "effector_positions_3D_select": self.effector_position_3D_select_cost,
+                          "regularization_cost": self.regularization_cost,
                           "coms_xy": self.com_cost_xy,
                           "coms_z": self.com_cost_z,
                           "coms_3D": self.com_cost_3D,
@@ -130,6 +131,21 @@ class Planner:
             print("Error in foot selection matrix: you must specify either foot or id")
         j = self.default_n_variables + 3 * id
         return self._expression_matrix(2, self._default_n_variables(phase), j)
+    
+    def foot_z(self, phase, foot=None, id=None):
+        """
+        Generate a selection matrix for a given foot x and y coordinates
+        @param phase phase data
+        @param foot foot to select
+        @param id id of the foot in the moving feet list
+        @return a (3, number of variables (without slacks)) selection matrix
+        """
+        if foot is not None:
+            id = np.argmax(phase.moving == foot)
+        elif id is None:
+            print("Error in foot selection matrix: you must specify either foot or id")
+        j = self.default_n_variables + 3 * id + 2
+        return self._expression_matrix(1, self._default_n_variables(phase), j)
 
     def _slack_selection_vector(self):
         """
@@ -662,7 +678,30 @@ class Planner:
             j += self._phase_n_variables(phase)
 
         return P, q
+    
+    def regularization_cost(self, previous_position):
+        """
+        Compute a cost to add a regularization term of the previous optimisation on the height of the feet.
+        """
+        n_variables = self._total_n_variables()
+        P = np.zeros((n_variables, n_variables))
+        q = np.zeros(n_variables)
 
+        j = 0
+        for id,phase in enumerate(self.pb.phaseData):
+            # feet_phase = self._feet_last_moving_phase(phase.id)
+            for foot in phase.moving:
+                if id < len(previous_position[foot]) - 1:
+                    A = np.zeros((1, n_variables))
+                    A[:, j:j + self._default_n_variables(phase)] = self.foot_z(phase, foot)
+                    b = previous_position[foot][phase.id + 1][2]
+
+                    P += np.dot(A.T, A)
+                    q -= np.dot(A.T, b).reshape(A.shape[1])
+
+            j += self._phase_n_variables(phase)
+
+        return P, q
 
     def compute_costs(self, costs):
         """
