@@ -115,7 +115,7 @@ def call_MIP_solver(slack_selection_vector, P=None, q=None, G=None, h=None, C=No
         if solver == Solvers.GUROBI:
             result = solve_MIP_gurobi_cost(slack_selection_vector, P, q, G, h, C, d)
         elif solver == Solvers.CVXPY:            
-            result = solve_MIP_cvxpy(slack_selection_vector, G, h, C, d)
+            result = solve_MIP_cvxpy(slack_selection_vector, P, q, G, h, C, d)
         else:
             print('Unknown MIP solver asked : ', solver)
             return    
@@ -557,8 +557,7 @@ def solve_MIP_gurobi_cost(slack_selection_vector, P, q, G=None, h=None, C=None, 
         print("Failed to solve the MIP")
         return ResultData(False, ms(t_end-t_init))
 
-
-def solve_MIP_cvxpy(slack_selection_vector, G=None, h=None, C=None, d=None):
+def solve_MIP_cvxpy(slack_selection_vector, P, q, G=None, h=None, C=None, d=None):
     """
     Solve the Mixed-Integer problem using CVXPY
     find x
@@ -570,16 +569,16 @@ def solve_MIP_cvxpy(slack_selection_vector, G=None, h=None, C=None, d=None):
     variables = cvxpy.Variable(n_variables)
     constraints = []
     if G.shape[0] > 0:
-        ineq_constraints = G * variables <= h
+        ineq_constraints = G @ variables <= h
         constraints.append(ineq_constraints)
         
     if C.shape[0] > 0:
-        eq_constraints = C * variables == d
+        eq_constraints = C @ variables == d
         constraints.append(eq_constraints)
 
     slack_indices = [i for i, el in enumerate(slack_selection_vector) if el > 0]
     n_slack_variables = len([el for el in slack_selection_vector if el > 0])
-    obj = cvxpy.Minimize(slack_selection_vector * variables)
+    obj = cvxpy.Minimize(slack_selection_vector @ variables)
 
     if n_slack_variables > 0:
         boolvars = cvxpy.Variable(n_slack_variables, boolean=True)
@@ -598,9 +597,12 @@ def solve_MIP_cvxpy(slack_selection_vector, G=None, h=None, C=None, d=None):
         previousL = el
     if len(currentSum) > 1:
         constraints = constraints + [sum(currentSum) == len(currentSum) - 1]
-    obj = cvxpy.Minimize(0.)
-    prob = cvxpy.Problem(obj, constraints)
-    prob.solve(solver=cvxpy.CBC, verbose=False)
+
+    # Replace the separate 'x' and its objective with 'variables'
+    objective = cvxpy.Minimize(0.5 * cvxpy.quad_form(variables, P) + q @ variables)
+
+    prob = cvxpy.Problem(objective, constraints)
+    prob.solve(solver=cvxpy.SCIP, verbose=False)
     t_end = clock()
     if prob.status not in ["infeasible", "unbounded"]:
         res = np.array([v.value for v in variables])
