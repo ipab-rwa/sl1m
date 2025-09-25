@@ -25,7 +25,7 @@ suffix_feet = "_quasi_flat_REDUCED.obj"
 if __name__ == '__main__':
     t_init = clock()
 
-    from sl1m.planner_scenarios.talos import lp_rubbles_path as tp
+    from sl1m.planner_scenarios.talos import lp_stairs_path as tp
     t_1 = clock()
 
     R, surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder, tp.ps, tp.afftool, tp.pathId, tp.v, 0.7, False)
@@ -57,6 +57,7 @@ if __name__ == '__main__':
     t_end = clock()
 
     print(result)
+
     print("Optimized number of steps:              ", pb.n_phases)
     print("Total time is:                          ", 1000. * (t_end-t_init))
     print("Computing the path takes                ", 1000. * (t_1 - t_init))

@@ -4,7 +4,6 @@ import sl1m.tools.plot_tools as plot
 import matplotlib.pyplot as plt
 
 from sl1m.rbprm.surfaces_from_planning import getSurfacesFromGuideContinuous
-from sl1m.stand_alone_scenarios.problem_definition_talos import Problem as TalosProblem
 from sl1m.problem_definition import Problem
 from sl1m.generic_solver import *
 
@@ -12,9 +11,8 @@ from time import perf_counter as clock
 
 GAIT = [np.array([1, 0]), np.array([0, 1])]
 
-USE_BIPED_PLANNER = False
 USE_MIP = False
-USE_COM = True
+USE_COM = False
 
 paths = [os.environ["INSTALL_HPP_DIR"] + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_",
          os.environ["INSTALL_HPP_DIR"] + "/share/talos-rbprm/relative_effector_positions/talos_"]
@@ -25,7 +23,7 @@ suffix_feet = "_quasi_flat_REDUCED.obj"
 if __name__ == '__main__':
     t_init = clock()
 
-    from sl1m.planner_scenarios.talos import lp_rubbles_path as tp
+    from sl1m.planner_scenarios.talos import lp_slalom_debris_path as tp
     t_1 = clock()
 
     R, surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder, tp.ps, tp.afftool, tp.pathId, tp.v, 0.7, False)
@@ -33,26 +31,17 @@ if __name__ == '__main__':
 
     p0 = [np.array(tp.q_init[:3]) + [0, 0.085, -0.98], np.array(tp.q_init[:3]) + [0, -0.085, -0.98]]
     t_3 = clock()
+        
+    surfaces_gait = [[surface] for surface in surfaces]
 
-    if USE_BIPED_PLANNER:
-        pb = TalosProblem(limb_names=limbs, constraint_paths=paths, suffix_com=suffix_com, suffix_feet=suffix_feet)
-        pb.generate_problem(R, surfaces, [0, 1], p0)
-        t_4 = clock()
-        if USE_MIP:
-            result = solve_MIP_biped(pb)
-        else:
-            result = solve_L1_combinatorial_biped(pb, surfaces)
+    pb = Problem(limb_names=limbs, constraint_paths=paths, suffix_com=suffix_com, suffix_feet=suffix_feet)
+    pb.generate_problem(R, surfaces_gait, GAIT, p0, tp.q_init[:3])
+    t_4 = clock()
+
+    if USE_MIP:
+        result = solve_MIP(pb, com=USE_COM)
     else:
-        surfaces_gait = [[surface] for surface in surfaces]
-
-        pb = Problem(limb_names=limbs, constraint_paths=paths, suffix_com=suffix_com, suffix_feet=suffix_feet)
-        pb.generate_problem(R, surfaces_gait, GAIT, p0, tp.q_init[:3])
-        t_4 = clock()
-
-        if USE_MIP:
-            result = solve_MIP(pb, com=USE_COM)
-        else:
-            result = solve_L1_combinatorial(pb, surfaces_gait, com=USE_COM)
+        result = solve_L1_combinatorial(pb, surfaces_gait, com=USE_COM)
 
     t_end = clock()
 

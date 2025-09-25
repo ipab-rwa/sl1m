@@ -12,8 +12,8 @@ from time import perf_counter as clock
 
 GAIT = [np.array([1, 0]), np.array([0, 1])]
 
-USE_BIPED_PLANNER = False
-USE_MIP = False
+USE_BIPED_PLANNER = True
+USE_MIP = True
 USE_COM = True
 
 paths = [os.environ["INSTALL_HPP_DIR"] + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_",
@@ -22,10 +22,11 @@ limbs = ["LF", "RF"]
 suffix_com = "_effector_frame_REDUCED.obj"
 suffix_feet = "_quasi_flat_REDUCED.obj"
 
+
 if __name__ == '__main__':
     t_init = clock()
 
-    from sl1m.planner_scenarios.talos import lp_rubbles_path as tp
+    from sl1m.planner_scenarios.talos import lp_ramp_path as tp
     t_1 = clock()
 
     R, surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder, tp.ps, tp.afftool, tp.pathId, tp.v, 0.7, False)
@@ -47,7 +48,6 @@ if __name__ == '__main__':
 
         pb = Problem(limb_names=limbs, constraint_paths=paths, suffix_com=suffix_com, suffix_feet=suffix_feet)
         pb.generate_problem(R, surfaces_gait, GAIT, p0, tp.q_init[:3])
-        t_4 = clock()
 
         if USE_MIP:
             result = solve_MIP(pb, com=USE_COM)
@@ -59,11 +59,10 @@ if __name__ == '__main__':
     print(result)
     print("Optimized number of steps:              ", pb.n_phases)
     print("Total time is:                          ", 1000. * (t_end-t_init))
-    print("Computing the path takes                ", 1000. * (t_1 - t_init))
-    print("Computing the surfaces takes            ", 1000. * (t_2 - t_1))
-    print("Computing the initial contacts takes    ", 1000. * (t_3 - t_2))
-    print("Generating the problem dictionary takes ", 1000. * (t_4 - t_3))
-    print("Solving the problem takes               ", 1000. * (t_end - t_4))
+    print("Computing the surfaces takes            ", 1000. * (t_1 - t_init))
+    print("Computing the initial contacts takes    ", 1000. * (t_2 - t_1))
+    print("Generating the problem dictionary takes ", 1000. * (t_3 - t_2))
+    print("Solving the problem takes               ", 1000. * (t_end - t_3))
     print("The LP and QP optimizations take        ", result.time)
 
     ax = plot.draw_scene(surfaces)
