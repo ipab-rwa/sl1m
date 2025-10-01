@@ -540,7 +540,7 @@ def solve_MIP_gurobi_cost(slack_selection_vector, P, q, G=None, h=None, C=None, 
             coeff = C[i, idx]
             expr = grb.LinExpr(coeff, variables)
             # ~ model.addConstr(expr, grb.GRB.EQUAL, d[i])
-            model.addConstr(expr == h[i])
+            model.addConstr(expr == d[i])
             # ~ model.addConstr(expr, grb.GRB.EQUAL, d[i])
     model.update()
 
