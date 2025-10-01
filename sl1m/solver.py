@@ -517,7 +517,8 @@ def solve_MIP_gurobi_cost(slack_selection_vector, P, q, G=None, h=None, C=None, 
 
     # Update model to integrate new variables
     model.update()
-    x = np.array(model.getVars(), copy=False)
+    # ~ x = np.array(model.getVars(), copy=False)
+    x = np.array(model.getVars(), )
 
     # Inequality constraints
     if G.shape[0] > 0:
@@ -526,7 +527,9 @@ def solve_MIP_gurobi_cost(slack_selection_vector, P, q, G=None, h=None, C=None, 
             variables = x[idx]
             coeff = G[i, idx]
             expr = grb.LinExpr(coeff, variables)
-            model.addConstr(expr, grb.GRB.LESS_EQUAL, h[i])
+            # ~ model.addConstr(expr, grb.GRB.LESS_EQUAL, h[i])
+            model.addConstr(expr <= h[i])
+            # ~ model.addConstr(expr, grb.GRB.LESS_EQUAL, h[i])
     model.update()
 
     # Equality constraints
@@ -536,7 +539,9 @@ def solve_MIP_gurobi_cost(slack_selection_vector, P, q, G=None, h=None, C=None, 
             variables = x[idx]
             coeff = C[i, idx]
             expr = grb.LinExpr(coeff, variables)
-            model.addConstr(expr, grb.GRB.EQUAL, d[i])
+            # ~ model.addConstr(expr, grb.GRB.EQUAL, d[i])
+            model.addConstr(expr == h[i])
+            # ~ model.addConstr(expr, grb.GRB.EQUAL, d[i])
     model.update()
 
     obj = grb.QuadExpr()
